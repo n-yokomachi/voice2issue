@@ -38,7 +38,7 @@ export default function Header({ onSettingsClick }: HeaderProps) {
             <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-base-primary to-main-primary rounded-lg shadow-md">
               <MicrophoneIcon className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-main-primary to-base-primary bg-clip-text text-transparent dark:bg-none dark:text-main-light">
+            <h1 className="text-2xl font-normal tracking-tight bg-gradient-to-r from-main-primary to-base-primary bg-clip-text text-transparent dark:bg-none dark:text-main-light">
               Voice 2 Issue
             </h1>
           </div>
