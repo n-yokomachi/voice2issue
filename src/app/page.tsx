@@ -3,16 +3,23 @@
 import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { RocketLaunchIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-import Header from '../components/Header';
-import VoiceInput from '../components/VoiceInput';
+import Header from '@/components/Header';
+import VoiceInput from '@/components/VoiceInput';
+import { 
+  setApiKeyCookie, 
+  getApiKeyCookie, 
+  clearApiKeyCookies,
+  isCookieStorageAvailable 
+} from '@/utils/secureCookieStorage';
 
 // SettingsModalをCSRで動的インポート
-const SettingsModal = dynamic(() => import('../components/SettingsModal'), {
+const SettingsModal = dynamic(() => import('@/components/SettingsModal'), {
   ssr: false,
 });
 
 type SettingsFormData = {
   githubRepository: string;
+  githubToken: string;
   anthropicApiKey: string;
   demoMode?: boolean;
 };
@@ -27,6 +34,7 @@ export default function Home() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showHowTo, setShowHowTo] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [lastCreatedIssue, setLastCreatedIssue] = useState<{issueNumber: number; issueUrl: string} | null>(null);
 
   // マウント状態の管理
   useEffect(() => {
@@ -38,36 +46,77 @@ export default function Home() {
     console.log('Current settings state:', settings);
   }, [settings]);
 
-  // 初期化時にlocalStorageから設定を読み込み
+  // 初期化時にセキュアCookieから設定を読み込み
   useEffect(() => {
     if (!mounted) return;
     
-    try {
-      const savedSettings = localStorage.getItem('voice2issue-settings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        setSettings(parsedSettings);
-        console.log('Settings loaded from localStorage:', parsedSettings);
-      } else {
-        console.log('No saved settings found in localStorage');
+    const loadSettings = async () => {
+      try {
+        // 非機密情報（一般設定）
+        const generalSettingsStr = localStorage.getItem('voice2issue-general-settings');
+        let generalSettings = {};
+        if (generalSettingsStr) {
+          generalSettings = JSON.parse(generalSettingsStr);
+        }
+
+        // 機密情報をセキュアCookieから取得
+        const githubToken = await getApiKeyCookie('github-token') || '';
+        const anthropicApiKey = await getApiKeyCookie('anthropic-key') || '';
+
+        if (generalSettings || githubToken || anthropicApiKey) {
+          const combinedSettings = {
+            ...generalSettings,
+            githubToken,
+            anthropicApiKey,
+          };
+          setSettings(combinedSettings as SettingsFormData);
+          console.log('Settings loaded from secure cookies:', {
+            ...combinedSettings,
+            githubToken: githubToken ? '***' : '',
+            anthropicApiKey: anthropicApiKey ? '***' : '',
+          });
+        } else {
+          console.log('No saved settings found in cookies');
+        }
+      } catch (error) {
+        console.error('Failed to load settings from cookies:', error);
       }
-    } catch (error) {
-      console.error('Failed to load settings from localStorage:', error);
-    }
+    };
+
+    loadSettings();
   }, [mounted]);
 
   const handleTranscriptChange = useCallback((newTranscript: string) => {
     setTranscript(newTranscript);
   }, []);
 
-  const handleSettingsSave = useCallback((newSettings: SettingsFormData) => {
+  const handleSettingsSave = useCallback(async (newSettings: SettingsFormData) => {
     setSettings(newSettings);
-    // localStorageに保存
+    // セキュアCookieに保存
     try {
-      localStorage.setItem('voice2issue-settings', JSON.stringify(newSettings));
-      console.log('Settings saved to localStorage:', newSettings);
+      // 非機密情報（一般設定）
+      const generalSettings = {
+        githubRepository: newSettings.githubRepository,
+        demoMode: newSettings.demoMode,
+      };
+      localStorage.setItem('voice2issue-general-settings', JSON.stringify(generalSettings));
+
+      // 機密情報（セキュアCookieに暗号化して保存）
+      if (newSettings.githubToken) {
+        await setApiKeyCookie('github-token', newSettings.githubToken);
+      }
+      if (newSettings.anthropicApiKey) {
+        await setApiKeyCookie('anthropic-key', newSettings.anthropicApiKey);
+      }
+
+      console.log('Settings saved to secure cookies:', {
+        ...generalSettings,
+        githubToken: newSettings.githubToken ? '***' : '',
+        anthropicApiKey: newSettings.anthropicApiKey ? '***' : '',
+        cookieSupport: isCookieStorageAvailable() ? 'Yes' : 'No'
+      });
     } catch (error) {
-      console.error('Failed to save settings to localStorage:', error);
+      console.error('Failed to save settings to secure cookies:', error);
     }
   }, []);
 
@@ -113,6 +162,12 @@ export default function Home() {
         setCreationStep('デモモード: Issue作成をシミュレーション...');
         setCreationProgress(75);
         await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // デモモードの場合はダミーデータ
+        setLastCreatedIssue({
+          issueNumber: 123,
+          issueUrl: "https://example.com/issues/123"
+        });
       } else {
         // 実際のMastraワークフローを呼び出し
         setCreationStep('音声内容を解析中...');
@@ -126,6 +181,8 @@ export default function Home() {
           body: JSON.stringify({
             voiceInput: actualTranscript,
             repository: settings.githubRepository,
+            githubToken: settings.githubToken,
+            anthropicApiKey: settings.anthropicApiKey,
           }),
         });
 
@@ -146,6 +203,12 @@ export default function Home() {
         setCreationProgress(75);
         
         console.log('Mastra workflow result:', result);
+        
+        // 実際のIssue情報を保存
+        setLastCreatedIssue({
+          issueNumber: result.issueNumber,
+          issueUrl: result.issueUrl
+        });
       }
       
       setCreationStep('完了しました！');
@@ -193,7 +256,10 @@ export default function Home() {
       <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* 音声入力コンポーネント */}
-          <VoiceInput onTranscriptChange={handleTranscriptChange} />
+          <VoiceInput 
+            onTranscriptChange={handleTranscriptChange} 
+            transcript={transcript}
+          />
           
 
 
@@ -301,17 +367,15 @@ export default function Home() {
                    Issue URL
                  </p>
                  <a
-                   href={settings?.demoMode 
-                     ? "https://example.com/issues/123" 
-                     : `https://github.com/${settings?.githubRepository || 'owner/repo'}/issues/123`}
+                   href={lastCreatedIssue?.issueUrl || "#"}
                    target="_blank"
                    rel="noopener noreferrer"
                    className="inline-flex items-center space-x-2 px-4 py-2 bg-main-light/10 dark:bg-navy-light/20 border border-main-light/30 dark:border-navy-light/30 rounded-lg hover:bg-main-light/20 dark:hover:bg-navy-light/30 transition-colors duration-200 text-main-primary dark:text-main-light text-sm"
                  >
                    <span>
-                     {settings?.demoMode 
-                       ? "example.com/issues/123" 
-                       : `github.com/${settings?.githubRepository || 'owner/repo'}/issues/123`}
+                     {lastCreatedIssue?.issueUrl ? 
+                       lastCreatedIssue.issueUrl.replace('https://', '') : 
+                       'Issue URL不明'}
                    </span>
                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

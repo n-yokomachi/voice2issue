@@ -4,23 +4,10 @@ import { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-
-const createSettingsSchema = (demoMode?: boolean) => z.object({
-  githubRepository: demoMode 
-    ? z.string().optional() 
-    : z.string()
-        .min(1, 'GitHubリポジトリは必須です')
-        .regex(/^[\w.-]+\/[\w.-]+$/, '形式: owner/repo'),
-  anthropicApiKey: demoMode 
-    ? z.string().optional() 
-    : z.string().min(1, 'Anthropic API Keyは必須です'),
-  demoMode: z.boolean().optional().default(false),
-});
 
 type SettingsFormData = {
   githubRepository: string;
+  githubToken: string;
   anthropicApiKey: string;
   demoMode?: boolean;
 };
@@ -41,16 +28,12 @@ export default function SettingsModal({
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors },
     reset,
-    watch
   } = useForm<SettingsFormData>({
     defaultValues: initialValues,
     mode: 'onChange',
   });
-
-  const watchedValues = watch();
-  const demoMode = watchedValues.demoMode;
 
   const onSubmit = (data: SettingsFormData) => {
     onSave(data);
@@ -127,6 +110,24 @@ export default function SettingsModal({
                         )}
                       </div>
 
+                      {/* GitHub Token設定 */}
+                      <div>
+                        <label htmlFor="githubToken" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          GitHub Personal Access Token
+                        </label>
+                        <input
+                          {...register('githubToken')}
+                          type="password"
+                          placeholder="ghp_..."
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                        />
+                        {errors.githubToken && (
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                            {errors.githubToken.message}
+                          </p>
+                        )}
+                      </div>
+
                       {/* Anthropic API Key設定 */}
                       <div>
                         <label htmlFor="anthropicApiKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -171,6 +172,7 @@ export default function SettingsModal({
                       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
                         <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                           <li>• Repository: owner/repo形式</li>
+                          <li>• GitHub Token: <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="underline">GitHub Settings</a>で発行（repo権限必要）</li>
                           <li>• API Key: <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="underline">Anthropic Console</a>で取得</li>
                           <li>• デモモード: 設定不要でテスト可能</li>
                         </ul>

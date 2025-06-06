@@ -34,6 +34,7 @@ interface SpeechRecognitionErrorEvent extends Event {
   readonly message: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 declare class SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
@@ -41,10 +42,10 @@ declare class SpeechRecognition extends EventTarget {
   maxAlternatives: number;
   serviceURI: string;
   
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
   
   start(): void;
   stop(): void;

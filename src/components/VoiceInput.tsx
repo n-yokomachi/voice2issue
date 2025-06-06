@@ -1,24 +1,42 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MicrophoneIcon, StopIcon } from '@heroicons/react/24/outline';
 import { clsx } from 'clsx';
-import '../types/speech';
+import '@/types/speech';
 
 interface VoiceInputProps {
   onTranscriptChange: (transcript: string) => void;
+  transcript?: string; // 親から渡される現在のtranscript値
   className?: string;
 }
 
-export default function VoiceInput({ onTranscriptChange, className }: VoiceInputProps) {
+export default function VoiceInput({ onTranscriptChange, transcript = '', className }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
   const [finalTranscript, setFinalTranscript] = useState(''); // 確定されたテキスト
   const [interimTranscript, setInterimTranscript] = useState(''); // 一時的なテキスト
   const [error, setError] = useState<string | null>(null);
   
   // refを使って音声認識オブジェクトと停止フラグを管理
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const shouldStopRef = useRef(false);
+  // finalTranscriptの最新値を保持するためのref
+  const finalTranscriptRef = useRef('');
+  
+  // finalTranscriptとrefを同期
+  useEffect(() => {
+    finalTranscriptRef.current = finalTranscript;
+  }, [finalTranscript]);
+
+  // 親から渡されるtranscriptと内部状態を同期
+  useEffect(() => {
+    if (transcript !== finalTranscript + interimTranscript) {
+      setFinalTranscript(transcript);
+      setInterimTranscript('');
+      finalTranscriptRef.current = transcript;
+    }
+  }, [transcript, finalTranscript, interimTranscript]);
 
   const startListening = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -47,29 +65,37 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
     };
 
     recognition.onresult = (event) => {
-      let newFinalTranscript = '';
-      let newInterimTranscript = '';
+      // 今回のセッションで新しく追加された結果のみを処理
+      let sessionFinalTranscript = '';
+      let sessionInterimTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptText = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          newFinalTranscript += transcriptText;
+          sessionFinalTranscript += transcriptText;
         } else {
-          newInterimTranscript += transcriptText;
+          sessionInterimTranscript += transcriptText;
         }
       }
 
-      // 新しい確定テキストがある場合は累積
-      if (newFinalTranscript) {
-        setFinalTranscript(prev => prev + newFinalTranscript);
-      }
-      
-      // 一時的なテキストを更新
-      setInterimTranscript(newInterimTranscript);
-
-      // 親コンポーネントに完全なテキストを送信
-      const fullTranscript = (finalTranscript + newFinalTranscript + newInterimTranscript).trim();
-      onTranscriptChange(fullTranscript);
+              // 新しい確定テキストがある場合は既存のfinalTranscriptに追加
+        if (sessionFinalTranscript) {
+          const updatedFinalTranscript = finalTranscriptRef.current + sessionFinalTranscript;
+          setFinalTranscript(updatedFinalTranscript);
+          finalTranscriptRef.current = updatedFinalTranscript;
+          
+          // 確定テキストが追加されたら一時テキストをクリア
+          setInterimTranscript(sessionInterimTranscript);
+          
+          // 親コンポーネントに送信
+          onTranscriptChange((updatedFinalTranscript + sessionInterimTranscript).trim());
+        } else {
+          // 一時的なテキストのみ更新
+          setInterimTranscript(sessionInterimTranscript);
+          
+          // 親コンポーネントに送信（既存のfinalTranscript + 新しいinterimTranscript）
+          onTranscriptChange((finalTranscriptRef.current + sessionInterimTranscript).trim());
+        }
     };
 
     recognition.onerror = (event) => {
@@ -110,7 +136,7 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
       setError('音声認識の開始に失敗しました');
       setIsListening(false);
     }
-  }, [finalTranscript, isListening, onTranscriptChange]);
+  }, [isListening, onTranscriptChange]);
 
   const stopListening = useCallback(() => {
     shouldStopRef.current = true;
@@ -129,6 +155,7 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
   const clearTranscript = useCallback(() => {
     setFinalTranscript('');
     setInterimTranscript('');
+    finalTranscriptRef.current = '';
     onTranscriptChange('');
   }, [onTranscriptChange]);
 
@@ -193,6 +220,7 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
               onChange={(e) => {
                 const newValue = e.target.value;
                 setFinalTranscript(newValue);
+                finalTranscriptRef.current = newValue;
                 setInterimTranscript('');
                 onTranscriptChange(newValue);
               }}
