@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { RocketLaunchIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import Header from '../components/Header';
 import VoiceInput from '../components/VoiceInput';
-import SettingsModal from '../components/SettingsModal';
+
+// SettingsModalをCSRで動的インポート
+const SettingsModal = dynamic(() => import('../components/SettingsModal'), {
+  ssr: false,
+});
 
 type SettingsFormData = {
   githubRepository: string;
@@ -21,6 +26,35 @@ export default function Home() {
   const [creationProgress, setCreationProgress] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showHowTo, setShowHowTo] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // マウント状態の管理
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // デバッグ用：設定の変更をログ出力
+  useEffect(() => {
+    console.log('Current settings state:', settings);
+  }, [settings]);
+
+  // 初期化時にlocalStorageから設定を読み込み
+  useEffect(() => {
+    if (!mounted) return;
+    
+    try {
+      const savedSettings = localStorage.getItem('voice2issue-settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setSettings(parsedSettings);
+        console.log('Settings loaded from localStorage:', parsedSettings);
+      } else {
+        console.log('No saved settings found in localStorage');
+      }
+    } catch (error) {
+      console.error('Failed to load settings from localStorage:', error);
+    }
+  }, [mounted]);
 
   const handleTranscriptChange = useCallback((newTranscript: string) => {
     setTranscript(newTranscript);
@@ -28,19 +62,23 @@ export default function Home() {
 
   const handleSettingsSave = useCallback((newSettings: SettingsFormData) => {
     setSettings(newSettings);
-    // TODO: 暗号化してlocalStorageに保存
-    console.log('Settings saved:', newSettings);
+    // localStorageに保存
+    try {
+      localStorage.setItem('voice2issue-settings', JSON.stringify(newSettings));
+      console.log('Settings saved to localStorage:', newSettings);
+    } catch (error) {
+      console.error('Failed to save settings to localStorage:', error);
+    }
   }, []);
 
   const handleCreateIssue = useCallback(async () => {
-    // デモモード時は音声入力なしでもOK
-    if (!settings?.demoMode && !transcript.trim()) {
-      alert('音声入力の内容が空です');
-      return;
-    }
-
-    // デモモードでない場合のみ設定チェック
+    // デモモードでない場合の入力チェック
     if (!settings?.demoMode) {
+      if (!transcript.trim()) {
+        alert('音声入力の内容が空です');
+        return;
+      }
+
       if (!settings?.githubRepository) {
         alert('GitHubリポジトリが設定されていません（デモモードを有効にするか設定を入力してください）');
         setIsSettingsOpen(true);
@@ -56,33 +94,59 @@ export default function Home() {
 
     setIsCreatingIssue(true);
     try {
-      // TODO: Mastraワークフローを呼び出し
-      // シミュレーション - 段階的な進捗表示
       const isDemoMode = settings?.demoMode;
       const actualTranscript = transcript.trim() || (isDemoMode ? 'ユーザー管理画面で、ユーザーの一覧を表示する機能を追加したいです。管理者がユーザーを検索したり、並び替えたりできるようにして、各ユーザーの詳細情報も確認できるようにしてください。' : '');
       
       console.log('Creating issue from transcript:', actualTranscript);
       console.log('Using settings:', settings);
-      
-      setCreationStep('音声内容を解析中...');
-      setCreationProgress(25);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       if (isDemoMode) {
+        // デモモードの場合は従来のシミュレーション
+        setCreationStep('デモモード: 音声内容を解析中...');
+        setCreationProgress(25);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
         setCreationStep('デモモード: 要件整理をシミュレーション...');
-      } else {
-        setCreationStep('Claude APIで要件整理中...');
-      }
-      setCreationProgress(50);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (isDemoMode) {
+        setCreationProgress(50);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         setCreationStep('デモモード: Issue作成をシミュレーション...');
+        setCreationProgress(75);
+        await new Promise(resolve => setTimeout(resolve, 800));
       } else {
-        setCreationStep('GitHub Issueを作成中...');
+        // 実際のMastraワークフローを呼び出し
+        setCreationStep('音声内容を解析中...');
+        setCreationProgress(25);
+        
+        const response = await fetch('/api/mastra/workflow', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            voiceInput: actualTranscript,
+            repository: settings.githubRepository,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.status}`);
+        }
+
+        setCreationStep('Claude APIで要件整理中...');
+        setCreationProgress(50);
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'ワークフロー実行に失敗しました');
+        }
+
+        setCreationStep('Issue作成完了！');
+        setCreationProgress(75);
+        
+        console.log('Mastra workflow result:', result);
       }
-      setCreationProgress(75);
-      await new Promise(resolve => setTimeout(resolve, 800));
       
       setCreationStep('完了しました！');
       setCreationProgress(100);
@@ -90,6 +154,8 @@ export default function Home() {
       
       // 完了モーダル表示
       setShowCelebration(true);
+      // Issue作成完了後は入力をリセット
+      setTranscript('');
     } catch (error) {
       alert('Issue作成に失敗しました');
       console.error('Issue creation error:', error);
@@ -135,7 +201,7 @@ export default function Home() {
           <div className="text-center space-y-4">
             <button
               onClick={handleCreateIssue}
-              disabled={(!settings?.demoMode && !transcript.trim()) || isCreatingIssue}
+              disabled={isCreatingIssue}
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-gradient-to-r from-accent to-accent-dark hover:from-accent-light hover:to-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-light disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-accent disabled:hover:to-accent-dark transition-all duration-200 shadow-lg"
             >
               {isCreatingIssue ? (
@@ -268,12 +334,14 @@ export default function Home() {
       )}
 
       {/* 設定モーダル */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onSave={handleSettingsSave}
-        initialValues={settings || undefined}
-      />
+      {mounted && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onSave={handleSettingsSave}
+          initialValues={settings || undefined}
+        />
+      )}
     </div>
   );
 }

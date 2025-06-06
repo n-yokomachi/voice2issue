@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { MicrophoneIcon, StopIcon } from '@heroicons/react/24/outline';
 import { clsx } from 'clsx';
 import '../types/speech';
@@ -12,8 +12,13 @@ interface VoiceInputProps {
 
 export default function VoiceInput({ onTranscriptChange, className }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const [finalTranscript, setFinalTranscript] = useState(''); // 確定されたテキスト
+  const [interimTranscript, setInterimTranscript] = useState(''); // 一時的なテキスト
   const [error, setError] = useState<string | null>(null);
+  
+  // refを使って音声認識オブジェクトと停止フラグを管理
+  const recognitionRef = useRef<any>(null);
+  const shouldStopRef = useRef(false);
 
   const startListening = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -26,11 +31,15 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
       setError('音声認識機能が利用できません');
       return;
     }
+
+    shouldStopRef.current = false;
     const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
     
     recognition.lang = 'ja-JP';
     recognition.continuous = true;
     recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -38,47 +47,97 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
     };
 
     recognition.onresult = (event) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
+      let newFinalTranscript = '';
+      let newInterimTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptText = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcriptText;
+          newFinalTranscript += transcriptText;
         } else {
-          interimTranscript += transcriptText;
+          newInterimTranscript += transcriptText;
         }
       }
 
-      const newTranscript = transcript + finalTranscript + interimTranscript;
-      setTranscript(newTranscript);
-      onTranscriptChange(newTranscript);
+      // 新しい確定テキストがある場合は累積
+      if (newFinalTranscript) {
+        setFinalTranscript(prev => prev + newFinalTranscript);
+      }
+      
+      // 一時的なテキストを更新
+      setInterimTranscript(newInterimTranscript);
+
+      // 親コンポーネントに完全なテキストを送信
+      const fullTranscript = (finalTranscript + newFinalTranscript + newInterimTranscript).trim();
+      onTranscriptChange(fullTranscript);
     };
 
     recognition.onerror = (event) => {
-      setError('音声認識エラーが発生しました');
-      setIsListening(false);
+      console.error('Speech recognition error:', event.error);
+      setError(`音声認識エラー: ${event.error}`);
+      
+      // ネットワークエラーの場合は再試行
+      if (event.error === 'network' && !shouldStopRef.current) {
+        setTimeout(() => {
+          if (!shouldStopRef.current) {
+            startListening();
+          }
+        }, 1000);
+      } else {
+        setIsListening(false);
+      }
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      // 手動停止でない場合は自動再開
+      if (!shouldStopRef.current && isListening) {
+        console.log('Auto-restarting speech recognition...');
+        setTimeout(() => {
+          if (!shouldStopRef.current) {
+            startListening();
+          }
+        }, 100);
+      } else {
+        setIsListening(false);
+        setInterimTranscript('');
+      }
     };
 
-    recognition.start();
-  }, [transcript, onTranscriptChange]);
+    try {
+      recognition.start();
+    } catch (error) {
+      console.error('Failed to start recognition:', error);
+      setError('音声認識の開始に失敗しました');
+      setIsListening(false);
+    }
+  }, [finalTranscript, isListening, onTranscriptChange]);
 
   const stopListening = useCallback(() => {
+    shouldStopRef.current = true;
     setIsListening(false);
+    setInterimTranscript('');
+    
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error('Failed to stop recognition:', error);
+      }
+    }
   }, []);
 
   const clearTranscript = useCallback(() => {
-    setTranscript('');
+    setFinalTranscript('');
+    setInterimTranscript('');
     onTranscriptChange('');
   }, [onTranscriptChange]);
 
+  // 表示用の完全なテキスト
+  const displayTranscript = finalTranscript + interimTranscript;
+
   return (
     <div className={clsx('w-full max-w-2xl mx-auto', className)}>
-              <div className="bg-white dark:bg-navy-secondary rounded-xl shadow-xl border border-main-light/50 dark:border-navy-light p-6">
+      <div className="bg-white dark:bg-navy-secondary rounded-xl shadow-xl border border-main-light/50 dark:border-navy-light p-6">
         {/* 音声入力ボタン */}
         <div className="flex flex-col items-center space-y-4">
           <button
@@ -98,9 +157,14 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
           </button>
 
           {isListening && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              音声を認識中...
-            </p>
+            <div className="text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                音声を認識中...
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                会話の間が空いても自動的に再開されます
+              </p>
+            </div>
           )}
         </div>
 
@@ -114,7 +178,7 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
         {/* 認識結果表示 */}
         <div className="mt-6">
           <div className="flex justify-end items-center mb-2">
-            {transcript && (
+            {displayTranscript && (
               <button
                 onClick={clearTranscript}
                 className="text-sm text-main-secondary hover:text-accent dark:text-main-light dark:hover:text-accent-light transition-colors duration-200"
@@ -123,15 +187,25 @@ export default function VoiceInput({ onTranscriptChange, className }: VoiceInput
               </button>
             )}
           </div>
-          <textarea
-            value={transcript}
-            onChange={(e) => {
-              setTranscript(e.target.value);
-              onTranscriptChange(e.target.value);
-            }}
-            placeholder="音声入力の内容..."
-            className="w-full h-32 px-3 py-2 border border-main-light dark:border-navy-accent rounded-md shadow-sm focus:ring-2 focus:ring-main-secondary focus:border-main-secondary bg-white dark:bg-navy-light text-main-primary dark:text-main-light placeholder-main-secondary/60 dark:placeholder-main-light/60 resize-none"
-          />
+          <div className="relative">
+            <textarea
+              value={displayTranscript}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setFinalTranscript(newValue);
+                setInterimTranscript('');
+                onTranscriptChange(newValue);
+              }}
+              placeholder="音声入力の内容..."
+              className="w-full h-32 px-3 py-2 border border-main-light dark:border-navy-accent rounded-md shadow-sm focus:ring-2 focus:ring-main-secondary focus:border-main-secondary bg-white dark:bg-navy-light text-main-primary dark:text-main-light placeholder-main-secondary/60 dark:placeholder-main-light/60 resize-none"
+            />
+            {/* 一時的なテキストのハイライト表示 */}
+            {interimTranscript && (
+              <div className="absolute bottom-2 right-2 text-xs text-accent dark:text-accent-light bg-white dark:bg-navy-primary px-2 py-1 rounded shadow">
+                認識中...
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
