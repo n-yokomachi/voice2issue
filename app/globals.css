@@ -1,26 +1,27 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@variant dark (&:where(.dark, .dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-main-primary: #1d3937;
+  --color-base-primary: #195042;
+  --color-main-secondary: #91855a;
+  --color-main-light: #d6cabc;
+  --color-accent: #991930;
+  
+  /* 高級感のあるグラデーション */
+  --color-main-primary-light: #2a4b48;
+  --color-main-primary-dark: #0f201f;
+  --color-accent-light: #b32a45;
+  --color-accent-dark: #7a1426;
+  
+  /* ダークモード用紺色系統 */
+  --color-navy-primary: #1a2332;
+  --color-navy-secondary: #2a3441;
+  --color-navy-light: #3b4651;
+  --color-navy-accent: #4a5568;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
