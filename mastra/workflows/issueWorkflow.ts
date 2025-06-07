@@ -141,7 +141,7 @@ const createGitHubIssue = createStep({
 @claude
 このIssueの実装をお願いします。
 実装タスクを分割し、ステップバイステップで実装してください。
-実装が完了したらPull Requestを作成し、Issueにリンクしてください。
+なお、Issueへのコメントは日本語を使用してください。
 
 ---
 *この依頼は Voice2Issue アプリケーションによって自動生成されました*`;
