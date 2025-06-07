@@ -192,21 +192,9 @@ const createGitHubIssue = createStep({
  * Claude Code実装依頼コメント生成関数
  */
 function generateClaudeCodeComment(issueBody: string, title: string): string {
-  return `@claude このIssueの実装をお願いします。実装タスクを分割し、ステップバイステップで実装してください。
-
-## 📋 実装要件
-${issueBody}
-
-## 🛠️ 実装ガイドライン
-- **アーキテクチャ**: プロジェクトの既存の規約とアーキテクチャに従って実装
-- **テスト**: 包括的なテストケースを作成（unit test、integration test）
-- **型安全性**: TypeScriptの型安全性を最大限活用
-- **エラーハンドリング**: 適切なエラーハンドリングと例外処理を実装
-- **ドキュメント**: 必要に応じてREADMEやコメントを更新
-- **コミット**: レビューしやすい単位でコミットを分割
-
-## 🎯 技術仕様
-**タイトル**: ${title}
+  return `@claude
+このIssueの実装をお願いします。
+実装タスクを分割し、ステップバイステップで実装してください。
 
 ---
 *このコメントは Voice2Issue アプリケーションによって自動生成されました*`;
