@@ -133,12 +133,25 @@ const createGitHubIssue = createStep({
       
       console.log(`📝 GitHub Issue作成開始: ${owner}/${repo}`);
 
-      // GitHub Issue作成
+      // Claude Code実装依頼を含むIssue本文を生成
+      const fullBody = `${inputData.body || ''}
+
+---
+
+@claude
+このIssueの実装をお願いします。
+実装タスクを分割し、ステップバイステップで実装してください。
+実装が完了したらPull Requestを作成し、Issueにリンクしてください。
+
+---
+*この依頼は Voice2Issue アプリケーションによって自動生成されました*`;
+
+      // GitHub Issue作成（Claude Code依頼込み）
       const issueResponse = await octokit.rest.issues.create({
         owner,
         repo,
         title: inputData.title,
-        body: inputData.body || '',
+        body: fullBody,
         labels: allLabels,
         assignees: [], // 必要に応じて設定
       });
@@ -146,26 +159,10 @@ const createGitHubIssue = createStep({
       const issueNumber = issueResponse.data.number;
       const issueUrl = issueResponse.data.html_url;
 
-      console.log(`✅ Issue作成成功: #${issueNumber} - ${issueUrl}`);
-
-      // Claude Code実装依頼コメントの作成と追加
-      let commentAdded = false;
-      try {
-        const claudeCodeComment = generateClaudeCodeComment(inputData.body, inputData.title);
-        
-        await octokit.rest.issues.createComment({
-          owner,
-          repo,
-          issue_number: issueNumber,
-          body: claudeCodeComment,
-        });
-        
-        commentAdded = true;
-        console.log(`💬 Claude Codeコメント追加成功`);
-      } catch (commentError) {
-        console.warn(`⚠️ Claude Codeコメント追加失敗:`, commentError);
-        // コメント追加の失敗はIssue作成の成功を妨げない
-      }
+      console.log(`✅ Issue作成成功（Claude Code依頼込み）: #${issueNumber} - ${issueUrl}`);
+      
+      // Issue本文に含めたので別途コメント不要
+      const commentAdded = true;
 
       return {
         success: true,
@@ -188,17 +185,7 @@ const createGitHubIssue = createStep({
   },
 });
 
-/**
- * Claude Code実装依頼コメント生成関数
- */
-function generateClaudeCodeComment(issueBody: string, title: string): string {
-  return `@claude
-このIssueの実装をお願いします。
-実装タスクを分割し、ステップバイステップで実装してください。
 
----
-*このコメントは Voice2Issue アプリケーションによって自動生成されました*`;
-}
 
 export const voiceToIssueWorkflow = createWorkflow({
   id: "voice-to-issue",
