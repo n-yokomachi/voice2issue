@@ -41,7 +41,7 @@ async function getEncryptionKey(): Promise<CryptoKey> {
       );
       return cachedKey;
     }
-  } catch (error) {
+  } catch {
     console.warn('Failed to import stored key, generating new one');
   }
 
@@ -56,7 +56,7 @@ async function getEncryptionKey(): Promise<CryptoKey> {
   try {
     const exportedKey = await crypto.subtle.exportKey('jwk', cachedKey);
     localStorage.setItem('voice2issue-cookie-key', JSON.stringify(exportedKey));
-  } catch (error) {
+  } catch {
     console.warn('Failed to store encryption key');
   }
 
@@ -272,7 +272,7 @@ export function isCookieStorageAvailable(): boolean {
     }
     
     return isAvailable;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

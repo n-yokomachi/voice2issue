@@ -8,7 +8,6 @@ import VoiceInput from '@/components/VoiceInput';
 import { 
   setApiKeyCookie, 
   getApiKeyCookie, 
-  clearApiKeyCookies,
   isCookieStorageAvailable 
 } from '@/utils/secureCookieStorage';
 
