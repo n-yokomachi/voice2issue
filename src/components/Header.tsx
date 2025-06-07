@@ -25,7 +25,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onSettingsClick }: HeaderProps) {
-  const { theme, setTheme, isDarkMode } = useTheme();
+  const { setTheme, isDarkMode } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
