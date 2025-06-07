@@ -29,7 +29,7 @@ export default function Home() {
   const [settings, setSettings] = useState<SettingsFormData | null>(null);
   const [isCreatingIssue, setIsCreatingIssue] = useState(false);
   const [creationStep, setCreationStep] = useState('');
-  const [creationProgress, setCreationProgress] = useState(0);
+
   const [showCelebration, setShowCelebration] = useState(false);
   const [showHowTo, setShowHowTo] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -150,17 +150,8 @@ export default function Home() {
 
       if (isDemoMode) {
         // デモモードの場合は従来のシミュレーション
-        setCreationStep('デモモード: 音声内容を解析中...');
-        setCreationProgress(25);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        setCreationStep('デモモード: 要件整理をシミュレーション...');
-        setCreationProgress(50);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setCreationStep('デモモード: Issue作成をシミュレーション...');
-        setCreationProgress(75);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        setCreationStep('デモモード: ワークフローをシミュレーション中...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // デモモードの場合はダミーデータ
         setLastCreatedIssue({
@@ -169,8 +160,7 @@ export default function Home() {
         });
       } else {
         // 実際のMastraワークフローを呼び出し
-        setCreationStep('音声内容を解析中...');
-        setCreationProgress(25);
+        setCreationStep('ワークフローを実行中...');
         
         const response = await fetch('/api/mastra/workflow', {
           method: 'POST',
@@ -189,17 +179,13 @@ export default function Home() {
           throw new Error(`API request failed: ${response.status}`);
         }
 
-        setCreationStep('Claude APIで要件整理中...');
-        setCreationProgress(50);
-        
         const result = await response.json();
         
         if (!result.success) {
           throw new Error(result.error || 'ワークフロー実行に失敗しました');
         }
 
-        setCreationStep('Issue作成完了！');
-        setCreationProgress(75);
+        setCreationStep('ワークフロー完了！');
         
         console.log('Mastra workflow result:', result);
         
@@ -211,8 +197,6 @@ export default function Home() {
       }
       
       setCreationStep('完了しました！');
-      setCreationProgress(100);
-      await new Promise(resolve => setTimeout(resolve, 500));
       
       // 完了モーダル表示
       setShowCelebration(true);
@@ -224,7 +208,6 @@ export default function Home() {
     } finally {
       setIsCreatingIssue(false);
       setCreationStep('');
-      setCreationProgress(0);
     }
   }, [transcript, settings]);
 
@@ -285,17 +268,16 @@ export default function Home() {
               )}
             </button>
             
-            {/* 進捗バー */}
+            {/* ローディングアニメーション */}
             {isCreatingIssue && (
               <div className="max-w-md mx-auto">
-                <div className="bg-main-light/20 dark:bg-navy-light/20 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-gradient-to-r from-accent to-accent-dark h-full transition-all duration-300 ease-out"
-                    style={{ width: `${creationProgress}%` }}
-                  ></div>
+                <div className="flex justify-center items-center space-x-2">
+                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-accent-light rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-2 h-2 bg-accent-dark rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 </div>
-                <p className="text-sm text-main-secondary dark:text-main-light mt-2">
-                  {creationProgress}% 完了
+                <p className="text-sm text-main-secondary dark:text-main-light mt-3 text-center">
+                  {creationStep || 'ワークフロー実行中...'}
                 </p>
               </div>
             )}
