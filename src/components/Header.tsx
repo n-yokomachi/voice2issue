@@ -3,6 +3,26 @@
 import { useState, useEffect } from 'react';
 import { Cog6ToothIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useTheme } from './ThemeProvider';
+import Image from 'next/image';
+
+// シンプルなVoice2Issueアイコン
+const Voice2IssueIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {/* マイク */}
+    <rect x="10" y="4" width="4" height="8" rx="2" fill="currentColor"/>
+    <path d="M12 12V16M8 16H16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    {/* 音声波形 */}
+    <path d="M6 10V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M18 10V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    {/* Issue記号 */}
+    <circle cx="18" cy="6" r="1.5" fill="currentColor"/>
+  </svg>
+);
 
 // GitHub SVGアイコン
 const GitHubIcon = ({ className }: { className?: string }) => (
@@ -46,8 +66,14 @@ export default function Header({ onSettingsClick }: HeaderProps) {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent-dark rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">V2I</span>
+              <div className="w-10 h-10 flex items-center justify-center hover:scale-105 transition-transform duration-200">
+                <Image
+                  src="/v2i.png"
+                  alt="Voice 2 Issue"
+                  width={40}
+                  height={40}
+                  className="object-contain rounded-lg"
+                />
               </div>
               <h1 className="text-xl font-bold text-main-primary dark:text-main-light">
                 Voice 2 Issue
@@ -56,7 +82,6 @@ export default function Header({ onSettingsClick }: HeaderProps) {
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* GitHubリンク */}
             <a
               href="https://github.com/n-yokomachi/voice2issue"
               target="_blank"
@@ -66,7 +91,6 @@ export default function Header({ onSettingsClick }: HeaderProps) {
               <GitHubIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             </a>
 
-            {/* ダークモードトグル */}
             <button
               onClick={toggleTheme}
               className="p-2 text-main-secondary dark:text-main-light hover:text-accent dark:hover:text-accent-light transition-colors duration-200 rounded-md hover:bg-main-light/20 dark:hover:bg-navy-light/20"
@@ -79,7 +103,6 @@ export default function Header({ onSettingsClick }: HeaderProps) {
               )}
             </button>
             
-            {/* 設定ボタン */}
             <button
               onClick={onSettingsClick}
               className="flex items-center space-x-2 px-3 py-2 text-main-secondary dark:text-main-light hover:text-accent dark:hover:text-accent-light transition-colors duration-200 rounded-md hover:bg-main-light/20 dark:hover:bg-navy-light/20"
