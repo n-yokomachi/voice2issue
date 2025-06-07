@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Octokit } from "@octokit/rest";
 import Anthropic from "@anthropic-ai/sdk";
 
+// 音声入力をClaude AIで分析してIssue情報を生成
 const analyzeVoiceInput = createStep({
   id: "analyze-voice-input",
   description: "音声入力を分析してIssue内容を生成",
@@ -21,7 +22,6 @@ const analyzeVoiceInput = createStep({
     labels: z.array(z.string()),
   }),
   execute: async ({ inputData, mastra }) => {
-    // APIキーを動的に設定してエージェントを呼び出し
     const Anthropic = require('@anthropic-ai/sdk');
     const anthropic = new Anthropic({
       apiKey: inputData.anthropicApiKey,
@@ -72,7 +72,6 @@ const analyzeVoiceInput = createStep({
     } catch (error) {
       console.error('Failed to parse agent response:', error);
       
-      // フォールバック: シンプルなIssue情報を生成
       return {
         repository: inputData.repository,
         githubToken: inputData.githubToken,
@@ -85,6 +84,7 @@ const analyzeVoiceInput = createStep({
   },
 });
 
+// GitHub Issueを作成し、Claude実装依頼を自動追加
 const createGitHubIssue = createStep({
   id: "create-github-issue",
   description: "GitHub Issueを作成",
@@ -107,22 +107,18 @@ const createGitHubIssue = createStep({
     console.log('Creating GitHub Issue with data:', inputData);
     
     try {
-      // GitHub Personal Access Tokenをユーザー入力から取得
       const token = inputData.githubToken;
       if (!token) {
         throw new Error('GitHubトークンが提供されていません');
       }
 
-      // Octokitクライアントの初期化
       const octokit = new Octokit({ auth: token });
 
-      // リポジトリ名の分割と検証
       const [owner, repo] = inputData.repository.split('/');
       if (!owner || !repo) {
         throw new Error(`無効なリポジトリ形式: ${inputData.repository}`);
       }
 
-      // 優先度に基づいてラベルを追加
       const priorityLabels = {
         low: ["priority: low"],
         medium: ["priority: medium"],
@@ -133,7 +129,6 @@ const createGitHubIssue = createStep({
       
       console.log(`📝 GitHub Issue作成開始: ${owner}/${repo}`);
 
-      // Claude Code実装依頼を含むIssue本文を生成
       const fullBody = `${inputData.body || ''}
 
 ---
@@ -146,14 +141,13 @@ const createGitHubIssue = createStep({
 ---
 *この依頼は Voice2Issue アプリケーションによって自動生成されました*`;
 
-      // GitHub Issue作成（Claude Code依頼込み）
       const issueResponse = await octokit.rest.issues.create({
         owner,
         repo,
         title: inputData.title,
         body: fullBody,
         labels: allLabels,
-        assignees: [], // 必要に応じて設定
+        assignees: [],
       });
 
       const issueNumber = issueResponse.data.number;
@@ -161,7 +155,6 @@ const createGitHubIssue = createStep({
 
       console.log(`✅ Issue作成成功（Claude Code依頼込み）: #${issueNumber} - ${issueUrl}`);
       
-      // Issue本文に含めたので別途コメント不要
       const commentAdded = true;
 
       return {
@@ -184,8 +177,6 @@ const createGitHubIssue = createStep({
     }
   },
 });
-
-
 
 export const voiceToIssueWorkflow = createWorkflow({
   id: "voice-to-issue",

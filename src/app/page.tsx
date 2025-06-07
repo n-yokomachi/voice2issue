@@ -276,9 +276,6 @@ export default function Home() {
                   <div className="w-2 h-2 bg-accent-light rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
                   <div className="w-2 h-2 bg-accent-dark rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 </div>
-                <p className="text-sm text-main-secondary dark:text-main-light mt-3 text-center">
-                  {creationStep || 'ワークフロー実行中...'}
-                </p>
               </div>
             )}
           </div>

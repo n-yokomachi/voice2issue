@@ -11,27 +11,19 @@
     "build:mastra": "mastra build"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.12",
     "@anthropic-ai/sdk": "^0.53.0",
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
-    "@hookform/resolvers": "^5.0.1",
     "@mastra/core": "^0.10.3",
-    "@mastra/github": "^1.2.1",
     "@mastra/libsql": "^0.10.1",
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "@octokit/auth-token": "^6.0.0",
     "@octokit/rest": "^22.0.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.513.0",
     "mastra": "^0.10.3",
     "next": "15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.57.0",
-    "tailwind-merge": "^3.3.0",
-    "zod": "^3.25.53",
-    "zustand": "^5.0.5"
+    "zod": "^3.25.53"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

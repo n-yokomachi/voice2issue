@@ -65,7 +65,6 @@ export function ThemeProvider({
 
     applyTheme();
 
-    // システムテーマ変更の監視
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = () => applyTheme();
@@ -83,13 +82,8 @@ export function ThemeProvider({
     isDarkMode,
   };
 
-  // Hydration問題を防ぐため、マウント後にのみ子要素をレンダリング
   if (!mounted) {
-    return (
-      <ThemeProviderContext.Provider {...props} value={value}>
-        <div suppressHydrationWarning>{children}</div>
-      </ThemeProviderContext.Provider>
-    );
+    return <>{children}</>;
   }
 
   return (

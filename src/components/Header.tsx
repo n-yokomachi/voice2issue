@@ -1,6 +1,7 @@
 'use client';
 
-import { Cog6ToothIcon, MicrophoneIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { Cog6ToothIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useTheme } from './ThemeProvider';
 
 // GitHub SVGアイコン
@@ -24,26 +25,37 @@ interface HeaderProps {
 }
 
 export default function Header({ onSettingsClick }: HeaderProps) {
-  const { isDarkMode, setTheme } = useTheme();
+  const { theme, setTheme, isDarkMode } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  const toggleDarkMode = () => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
   };
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <header className="bg-white dark:bg-navy-primary shadow-lg border-b border-main-light/30 dark:border-navy-light/50">
+    <header className="bg-white dark:bg-navy-primary border-b border-main-light/50 dark:border-navy-light/50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4 min-h-[64px]">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-base-primary to-main-primary rounded-lg shadow-md">
-              <MicrophoneIcon className="h-6 w-6 text-white" />
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent-dark rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">V2I</span>
+              </div>
+              <h1 className="text-xl font-bold text-main-primary dark:text-main-light">
+                Voice 2 Issue
+              </h1>
             </div>
-            <h1 className="text-2xl font-normal tracking-tight bg-gradient-to-r from-main-primary to-base-primary bg-clip-text text-transparent dark:bg-none dark:text-main-light">
-              Voice 2 Issue
-            </h1>
           </div>
-          
-          <div className="flex items-center space-x-2 sm:space-x-3">
+
+          <div className="flex items-center space-x-3">
             {/* GitHubリンク */}
             <a
               href="https://github.com/n-yokomachi/voice2issue"
@@ -56,22 +68,24 @@ export default function Header({ onSettingsClick }: HeaderProps) {
 
             {/* ダークモードトグル */}
             <button
-              onClick={toggleDarkMode}
-              className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 text-main-primary dark:text-main-light hover:text-accent dark:hover:text-accent-light transition-colors duration-200"
+              onClick={toggleTheme}
+              className="p-2 text-main-secondary dark:text-main-light hover:text-accent dark:hover:text-accent-light transition-colors duration-200 rounded-md hover:bg-main-light/20 dark:hover:bg-navy-light/20"
+              title={isDarkMode ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
             >
               {isDarkMode ? (
-                <SunIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <SunIcon className="h-5 w-5" />
               ) : (
-                <MoonIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <MoonIcon className="h-5 w-5" />
               )}
             </button>
             
             {/* 設定ボタン */}
             <button
               onClick={onSettingsClick}
-              className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 border border-main-light dark:border-navy-light rounded-md shadow-sm text-main-primary dark:text-main-light bg-white/80 dark:bg-navy-secondary/50 hover:bg-main-light/20 dark:hover:bg-navy-light/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-all duration-200"
+              className="flex items-center space-x-2 px-3 py-2 text-main-secondary dark:text-main-light hover:text-accent dark:hover:text-accent-light transition-colors duration-200 rounded-md hover:bg-main-light/20 dark:hover:bg-navy-light/20"
             >
-                              <Cog6ToothIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Cog6ToothIcon className="h-5 w-5" />
+              <span className="text-sm font-medium">設定</span>
             </button>
           </div>
         </div>

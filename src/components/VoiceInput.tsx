@@ -38,6 +38,7 @@ export default function VoiceInput({ onTranscriptChange, transcript = '', classN
     }
   }, [transcript, finalTranscript, interimTranscript]);
 
+  // 音声認識開始
   const startListening = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       setError('お使いのブラウザは音声認識に対応していません');
@@ -138,6 +139,7 @@ export default function VoiceInput({ onTranscriptChange, transcript = '', classN
     }
   }, [isListening, onTranscriptChange]);
 
+  // 音声認識停止
   const stopListening = useCallback(() => {
     shouldStopRef.current = true;
     setIsListening(false);
@@ -152,6 +154,7 @@ export default function VoiceInput({ onTranscriptChange, transcript = '', classN
     }
   }, []);
 
+  // テキストクリア
   const clearTranscript = useCallback(() => {
     setFinalTranscript('');
     setInterimTranscript('');
