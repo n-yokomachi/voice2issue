@@ -7,16 +7,27 @@ Voice2Issue is an AI-powered application that transforms voice input into struct
 - **Voice Recognition**: Web Speech API for Japanese voice input with auto-recovery
 - **AI Analysis**: Mastra Framework with Anthropic Claude for content processing
 - **GitHub Integration**: Direct Octokit API integration for issue creation
-- **Secure Storage**: AES-GCM encryption for credential management
 
 ## Technology Stack
 
-- **Framework**: Next.js 15 with TypeScript
-- **AI Processing**: Mastra Framework + Anthropic Claude
-- **GitHub API**: Octokit REST API
-- **Styling**: TailwindCSS
-- **State Management**: Zustand
-- **Security**: Web Crypto API with AES-GCM encryption
+- Frontend
+    - Next.js 15.3.3
+    - TypeScript 5
+    - Tailwind CSS 4
+    - Headless UI 2.2.4
+- Agent Workflow
+    - Mastra 0.10.3
+    - Anthropic Claude SDK 0.53.0
+- API
+    - Octokit REST 22.0.0
+    - Web Speech API
+- Deployment
+    - Vercel
+- Coding Agent
+    - [Claude Code Actions](https://github.com/anthropics/claude-code-action)
+    - Used Cursor (Claude Sonnet 4) for implementation
+
+
 
 ## Architecture
 
@@ -49,11 +60,6 @@ voice2issue/
 └── package.json
 ```
 
-## Security
-
-- **Credential Encryption**: AES-GCM 256-bit encryption
-- **Secure Cookies**: HTTPOnly with SameSite protection
-- **Auto-expiration**: 2-hour credential timeout
 
 ## License
 
