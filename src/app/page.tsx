@@ -298,10 +298,10 @@ export default function Home() {
             {showHowTo && (
               <div className="px-4 pb-4 border-t border-main-light/30 dark:border-navy-light/30">
                 <ol className="list-decimal list-inside space-y-2 text-sm text-main-primary dark:text-main-light pt-4">
-                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">設定で Repository と API Key を入力</li>
-                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">マイクボタンで音声入力</li>
-                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">機能を自然な言葉で説明</li>
-                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">Issue作成ボタンで完了</li>
+                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">設定でGitHubのリポジトリとGitHub Access Token、Anthropic API Keyを入力</li>
+                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">マイクボタンを押して実装したい要件を話す</li>
+                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">Create Issueボタンを押す</li>
+                  <li className="hover:text-accent dark:hover:text-accent-light transition-colors cursor-default">完了したらIssueのURLが表示される</li>
                 </ol>
               </div>
             )}

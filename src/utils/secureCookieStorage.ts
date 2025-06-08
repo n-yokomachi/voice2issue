@@ -1,22 +1,6 @@
 /**
- * セキュアCookieストレージ
+ * セキュアSessionStorageユーティリティ
  */
-
-export interface CookieOptions {
-  maxAge?: number; // 秒単位
-  expires?: Date;
-  secure?: boolean;
-  sameSite?: 'strict' | 'lax' | 'none';
-  domain?: string;
-  path?: string;
-}
-
-const DEFAULT_COOKIE_OPTIONS: CookieOptions = {
-  maxAge: 60 * 60 * 2, // 2時間
-  secure: true, // HTTPS必須
-  sameSite: 'strict', // CSRF攻撃防止
-  path: '/', // アプリ全体で有効
-};
 
 // Web Crypto API用のキーキャッシュ
 let cachedKey: CryptoKey | null = null;
@@ -29,7 +13,7 @@ async function getEncryptionKey(): Promise<CryptoKey> {
 
   try {
     // localStorage からキーを復元を試行
-    const storedKey = localStorage.getItem('voice2issue-cookie-key');
+    const storedKey = localStorage.getItem('voice2issue-storage-key');
     if (storedKey) {
       const keyData = JSON.parse(storedKey);
       cachedKey = await crypto.subtle.importKey(
@@ -55,7 +39,7 @@ async function getEncryptionKey(): Promise<CryptoKey> {
   // キーを保存
   try {
     const exportedKey = await crypto.subtle.exportKey('jwk', cachedKey);
-    localStorage.setItem('voice2issue-cookie-key', JSON.stringify(exportedKey));
+    localStorage.setItem('voice2issue-storage-key', JSON.stringify(exportedKey));
   } catch {
     console.warn('Failed to store encryption key');
   }
@@ -128,147 +112,54 @@ async function decryptValue(encryptedText: string): Promise<string> {
   }
 }
 
-
-
 /**
- * 暗号化してCookieに保存
+ * APIキー専用のセキュアSessionStorage設定
  */
-export async function setSecureCookie(
-  name: string, 
-  value: string, 
-  options: CookieOptions = {}
-): Promise<void> {
-  if (!value) return;
+export async function setApiKeyStorage(keyName: string, keyValue: string): Promise<void> {
+  if (!keyValue) return;
 
   try {
     // 値を暗号化
-    const encryptedValue = await encryptValue(value);
+    const encryptedValue = await encryptValue(keyValue);
 
-    // Cookieオプションを構築
-    const cookieOptions = { ...DEFAULT_COOKIE_OPTIONS, ...options };
-    const optionsString = buildCookieOptionsString(cookieOptions);
-
-    // セキュアCookieを設定
-    document.cookie = `${name}=${encodeURIComponent(encryptedValue)}${optionsString}`;
+    // sessionStorageに保存
+    sessionStorage.setItem(`voice2issue-${keyName}`, encryptedValue);
     
-    console.log(`Secure cookie set: ${name} (expires in ${cookieOptions.maxAge}s)`);
+    console.log(`Secure API key stored in sessionStorage: ${keyName}`);
   } catch (error) {
-    console.error('Failed to set secure cookie:', error);
+    console.error('Failed to set secure API key in sessionStorage:', error);
   }
 }
 
 /**
- * Cookieから復号化して取得
+ * APIキー専用のセキュアSessionStorage取得
  */
-export async function getSecureCookie(name: string): Promise<string | null> {
+export async function getApiKeyStorage(keyName: string): Promise<string | null> {
   try {
-    const cookies = document.cookie.split(';');
-    const targetCookie = cookies.find(cookie => 
-      cookie.trim().startsWith(`${name}=`)
-    );
-
-    if (!targetCookie) return null;
-
-    const encryptedValue = decodeURIComponent(
-      targetCookie.split('=')[1].trim()
-    );
+    const encryptedValue = sessionStorage.getItem(`voice2issue-${keyName}`);
+    
+    if (!encryptedValue) return null;
 
     // 復号化
     return await decryptValue(encryptedValue);
   } catch (error) {
-    console.error('Failed to get secure cookie:', error);
+    console.error('Failed to get secure API key from sessionStorage:', error);
     return null;
   }
 }
 
 /**
- * セキュアCookieを削除
+ * SessionStorage保存可能性チェック
  */
-export function removeSecureCookie(name: string, options: CookieOptions = {}): void {
+export function isSessionStorageAvailable(): boolean {
   try {
-    const cookieOptions = { ...DEFAULT_COOKIE_OPTIONS, ...options };
-    // 過去の日付を設定して削除
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT${buildCookieOptionsString(cookieOptions)}`;
-    console.log(`Secure cookie removed: ${name}`);
-  } catch (error) {
-    console.error('Failed to remove secure cookie:', error);
-  }
-}
-
-/**
- * Cookieオプション文字列を構築
- */
-function buildCookieOptionsString(options: CookieOptions): string {
-  const parts: string[] = [];
-
-  if (options.maxAge !== undefined) {
-    parts.push(`; max-age=${options.maxAge}`);
-  }
-
-  if (options.expires) {
-    parts.push(`; expires=${options.expires.toUTCString()}`);
-  }
-
-  if (options.secure) {
-    parts.push('; secure');
-  }
-
-  if (options.sameSite) {
-    parts.push(`; samesite=${options.sameSite}`);
-  }
-
-  if (options.domain) {
-    parts.push(`; domain=${options.domain}`);
-  }
-
-  if (options.path) {
-    parts.push(`; path=${options.path}`);
-  }
-
-  return parts.join('');
-}
-
-/**
- * APIキー専用のセキュアCookie設定
- */
-export async function setApiKeyCookie(keyName: string, keyValue: string): Promise<void> {
-  await setSecureCookie(`voice2issue-${keyName}`, keyValue, {
-    maxAge: 60 * 60 * 2, // 2時間
-    secure: true,
-    sameSite: 'strict',
-    path: '/',
-  });
-}
-
-/**
- * APIキー専用のセキュアCookie取得
- */
-export async function getApiKeyCookie(keyName: string): Promise<string | null> {
-  return await getSecureCookie(`voice2issue-${keyName}`);
-}
-
-/**
- * 全てのAPIキーCookieを削除
- */
-export function clearApiKeyCookies(): void {
-  const apiKeyNames = ['github-token', 'anthropic-key'];
-  apiKeyNames.forEach(keyName => {
-    removeSecureCookie(`voice2issue-${keyName}`);
-  });
-}
-
-/**
- * Cookie保存可能性チェック
- */
-export function isCookieStorageAvailable(): boolean {
-  try {
-    const testCookie = 'voice2issue-test';
-    document.cookie = `${testCookie}=test; max-age=1`;
-    const isAvailable = document.cookie.includes(testCookie);
+    const testKey = 'voice2issue-test';
+    sessionStorage.setItem(testKey, 'test');
+    const isAvailable = sessionStorage.getItem(testKey) === 'test';
     
-    // テストCookieを削除
+    // テストデータを削除
     if (isAvailable) {
-      document.cookie = `${testCookie}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      sessionStorage.removeItem(testKey);
     }
     
     return isAvailable;
@@ -276,5 +167,10 @@ export function isCookieStorageAvailable(): boolean {
     return false;
   }
 }
+
+// 互換性のために古い名前もエクスポート
+export const setApiKeyCookie = setApiKeyStorage;
+export const getApiKeyCookie = getApiKeyStorage;
+export const isCookieStorageAvailable = isSessionStorageAvailable;
 
  

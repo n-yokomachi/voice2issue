@@ -98,7 +98,7 @@ export default function SettingsModal({
                         className="rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700"
                       />
                       <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                        デモモード (設定不要でテスト実行)
+                        デモモード
                       </span>
                     </label>
                   </div>
